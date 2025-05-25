@@ -3,7 +3,7 @@
   "name": "Floating Timer",
   "version": "1.0",
   "description": "Always-visible timer that rings when time is up.",
-  "permissions": ["scripting", "activeTab"],
+  "permissions": ["scripting", "activeTab", "storage"],
   "action": {
     "default_title": "Start Floating Timer"
   },

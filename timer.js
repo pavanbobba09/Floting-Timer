@@ -1,21 +1,37 @@
 
-let countdown;
+const alarm = new Audio(chrome.runtime.getURL("alarm.mp3"));
 
 document.getElementById("startBtn").addEventListener("click", () => {
-  let timeLeft = parseInt(document.getElementById("timeInput").value, 10);
+  const timeInput = parseInt(document.getElementById("timeInput").value, 10);
+  if (timeInput > 0) {
+    chrome.runtime.sendMessage({
+      type: 'START_TIMER',
+      duration: timeInput
+    });
+  }
+});
+
+chrome.runtime.onMessage.addListener((message) => {
   const timerDisplay = document.getElementById("timerDisplay");
-  const alarm = new Audio(chrome.runtime.getURL("alarm.mp3"));
-
-  clearInterval(countdown);
-
-  countdown = setInterval(() => {
+  
+  if (message.type === 'TIMER_UPDATE') {
+    const timeLeft = message.timerState.timeLeft;
     timerDisplay.textContent = `Time Left: ${timeLeft}s`;
-    timeLeft--;
+  } else if (message.type === 'TIMER_COMPLETE') {
+    timerDisplay.textContent = "Time's up!";
+    alarm.play();
+  }
+});
 
-    if (timeLeft < 0) {
-      clearInterval(countdown);
+chrome.runtime.sendMessage({ type: 'GET_TIMER_STATE' }, (response) => {
+  if (response && response.timerState) {
+    const timerDisplay = document.getElementById("timerDisplay");
+    const state = response.timerState;
+    
+    if (state.isRunning) {
+      timerDisplay.textContent = `Time Left: ${state.timeLeft}s`;
+    } else if (state.timeLeft === 0 && state.duration > 0) {
       timerDisplay.textContent = "Time's up!";
-      alarm.play();
     }
-  }, 1000);
+  }
 });

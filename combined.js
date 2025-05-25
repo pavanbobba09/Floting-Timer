@@ -196,8 +196,7 @@
   document.head.appendChild(styleEl);
   document.body.appendChild(timerBox);
   
-  // Timer logic
-  let countdown;
+  // Timer logic - now communicates with background script
   let isRunning = false;
   
   // Get UI elements
@@ -256,13 +255,13 @@
       timeInput.value = "5";
     }
     
-    let timeLeft = minutes * 60; // Convert to seconds
+    const duration = minutes * 60; // Convert to seconds
     
-    // Create audio element for alarm
-    const alarm = new Audio(chrome.runtime.getURL("alarm.mp3"));
-    
-    // Clear any existing countdown
-    clearInterval(countdown);
+    // Send message to background script to start timer
+    chrome.runtime.sendMessage({
+      type: 'START_TIMER',
+      duration: duration
+    });
     
     // Update UI
     startBtn.disabled = true;
@@ -270,15 +269,28 @@
     timeInput.disabled = true;
     isRunning = true;
     timerBox.classList.add('running');
+  });
+  
+  // Stop timer
+  stopBtn.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ type: 'STOP_TIMER' });
+    timerDisplay.textContent = "Stopped";
+    timerDisplay.classList.remove('low-time', 'critical-time');
+    timerBox.classList.remove('running', 'urgent');
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    timeInput.disabled = false;
+    isRunning = false;
+  });
+  
+  // Listen for timer updates from background script
+  chrome.runtime.onMessage.addListener((message) => {
+    const alarm = new Audio(chrome.runtime.getURL("alarm.mp3"));
     
-    // Display initial time
-    timerDisplay.textContent = formatTime(timeLeft);
-    
-    // Start the countdown
-    countdown = setInterval(() => {
-      timeLeft--;
+    if (message.type === 'TIMER_UPDATE') {
+      const timeLeft = message.timerState.timeLeft;
       timerDisplay.textContent = formatTime(timeLeft);
-
+      
       // Add urgency effects as time runs out
       timerDisplay.classList.remove('low-time', 'critical-time');
       timerBox.classList.remove('urgent');
@@ -289,20 +301,17 @@
       if (timeLeft <= 30) {
         // Show motivational message every 10 seconds when time is getting low
         if (timeLeft % 10 === 0) {
-          // Array of motivational messages
           const messages = [
             "Keep going! 🔥",
-            "Almost there! 💪",
+            "Almost there! 💪", 
             "Stay focused! 👊",
             "You've got this! ⚡",
             "Push through! 🚀"
           ];
-
-          // Show message briefly
+          
           const originalText = timerDisplay.textContent;
           timerDisplay.textContent = messages[Math.floor(Math.random() * messages.length)];
-
-          // Return to timer after 1 second
+          
           setTimeout(() => {
             if (isRunning) {
               timerDisplay.textContent = originalText;
@@ -315,54 +324,59 @@
         timerBox.classList.add('urgent');
       }
       
-      if (timeLeft <= 0) {
-        clearInterval(countdown);
+    } else if (message.type === 'TIMER_COMPLETE') {
+      timerDisplay.textContent = "Time's up! 🔥";
+      timerDisplay.classList.add('critical-time');
+      timerBox.classList.remove('running');
+      timerBox.classList.add('urgent');
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      timeInput.disabled = false;
+      isRunning = false;
+      
+      // Flash effect with fire colors
+      let flashCount = 0;
+      const flash = setInterval(() => {
+        timerBox.style.background = flashCount % 2 === 0 ? 
+          'linear-gradient(135deg, #ff1744, #ff5722)' : 
+          'linear-gradient(135deg, #ff5722, #ff9800)';
+        flashCount++;
+        if (flashCount > 10) {
+          clearInterval(flash);
+          timerBox.style.background = '';
+        }
+      }, 300);
+      
+      // Play alarm
+      alarm.play().catch(e => {
+        console.error("Could not play alarm:", e);
+      });
+    }
+  });
+  
+  // Get initial timer state when content script loads
+  chrome.runtime.sendMessage({ type: 'GET_TIMER_STATE' }, (response) => {
+    if (response && response.timerState) {
+      const state = response.timerState;
+      
+      if (state.isRunning) {
+        timerDisplay.textContent = formatTime(state.timeLeft);
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        timeInput.disabled = true;
+        isRunning = true;
+        timerBox.classList.add('running');
+      } else if (state.timeLeft === 0 && state.duration > 0) {
         timerDisplay.textContent = "Time's up! 🔥";
         timerDisplay.classList.add('critical-time');
-        timerBox.classList.remove('running');
         timerBox.classList.add('urgent');
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-        timeInput.disabled = false;
-        isRunning = false;
-        
-        // Flash effect with fire colors
-        let flashCount = 0;
-        const flash = setInterval(() => {
-          timerBox.style.background = flashCount % 2 === 0 ? 
-            'linear-gradient(135deg, #ff1744, #ff5722)' : 
-            'linear-gradient(135deg, #ff5722, #ff9800)';
-          flashCount++;
-          if (flashCount > 10) {
-            clearInterval(flash);
-            timerBox.style.background = '';
-          }
-        }, 300);
-        
-        // Play alarm
-        alarm.play().catch(e => {
-          console.error("Could not play alarm:", e);
-        });
       }
-    }, 1000);
+    }
   });
-  
-  // Stop timer
-  stopBtn.addEventListener("click", () => {
-    clearInterval(countdown);
-    timerDisplay.textContent = "Stopped";
-    timerDisplay.classList.remove('low-time', 'critical-time');
-    timerBox.classList.remove('running', 'urgent');
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
-    timeInput.disabled = false;
-    isRunning = false;
-  });
-  
+
   // Close timer
   closeBtn.addEventListener("click", (e) => {
     e.stopPropagation(); // Prevent dragging
-    clearInterval(countdown);
     timerBox.remove();
   });
   
