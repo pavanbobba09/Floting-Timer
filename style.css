@@ -1,0 +1,20 @@
+
+#floating-timer {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 150px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  padding: 10px;
+  font-family: sans-serif;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  z-index: 9999;
+  border-radius: 8px;
+}
+
+#floating-timer input,
+#floating-timer button {
+  width: 100%;
+  margin: 4px 0;
+}
