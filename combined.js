@@ -6,139 +6,187 @@
   const timerBox = document.createElement("div");
   timerBox.id = "floating-timer";
   timerBox.innerHTML = `
-    <div class="timer-header">
-      <h3>🔥 Focus Timer</h3>
-      <span id="close-timer">×</span>
+    <div id="dragHandle">≡≡ <span id="closeBtn">×</span></div>
+    <input type="number" id="timeInput" placeholder="Min" value="25" min="1" max="60" />
+    <div class="timer-buttons">
+      <button id="startBtn">▶</button>
+      <button id="stopBtn" disabled>⏹</button>
     </div>
-    <div class="timer-body">
-      <input type="number" id="timeInput" placeholder="Minutes" value="25" min="1" max="60" />
-      <div class="timer-buttons">
-        <button id="startBtn">Start</button>
-        <button id="stopBtn" disabled>Stop</button>
-      </div>
-      <div id="timerDisplay" class="timer-display">Ready to focus!</div>
-    </div>
+    <div id="timerDisplay" class="timer-display">Ready!</div>
   `;
   
   // Add styles inline to ensure they work in Brave
   const styles = `
+    @keyframes fireGlow {
+      0%, 100% { box-shadow: 0 0 5px #ff4500, 0 0 10px #ff6500, 0 0 15px #ff8500; }
+      50% { box-shadow: 0 0 10px #ff6500, 0 0 20px #ff8500, 0 0 30px #ffa500; }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    @keyframes urgentPulse {
+      0%, 100% { transform: scale(1); background: linear-gradient(135deg, #ff1744, #ff5722); }
+      50% { transform: scale(1.1); background: linear-gradient(135deg, #ff5722, #ff9800); }
+    }
+
     #floating-timer {
       position: fixed;
       top: 20px;
       right: 20px;
-      width: 220px;
-      background: linear-gradient(135deg, #ff7e5f, #feb47b);
+      width: 90px;
+      background: linear-gradient(135deg, #ff7e5f, #feb47b, #ff6b35);
       color: white;
       border: none;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      padding: 4px;
+      font-family: 'Arial', sans-serif;
+      box-shadow: 0 4px 15px rgba(255, 100, 0, 0.4);
       z-index: 2147483647;
-      border-radius: 12px;
-      overflow: hidden;
+      border-radius: 8px;
+      user-select: none;
+      animation: fireGlow 2s ease-in-out infinite;
       transition: all 0.3s ease;
     }
     
-    #floating-timer:hover {
-      box-shadow: 0 15px 30px rgba(0,0,0,0.3);
-      transform: translateY(-2px);
+    #floating-timer.running {
+      animation: pulse 1s ease-in-out infinite;
     }
     
-    .timer-header {
+    #floating-timer.urgent {
+      animation: urgentPulse 0.5s ease-in-out infinite;
+    }
+    
+    #dragHandle {
+      background: rgba(255, 255, 255, 0.2);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 15px;
-      background-color: rgba(0,0,0,0.1);
+      padding: 2px 4px;
+      margin: -4px -4px 2px -4px;
+      border-radius: 8px 8px 0 0;
+      cursor: grab;
+      font-size: 8px;
+      color: rgba(255, 255, 255, 0.8);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(2px);
     }
     
-    .timer-header h3 {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 500;
+    #dragHandle:active {
+      cursor: grabbing;
+      background: rgba(255, 255, 255, 0.3);
     }
     
-    #close-timer {
+    #closeBtn {
       cursor: pointer;
-      font-size: 20px;
+      font-size: 12px;
       font-weight: bold;
+      color: rgba(255, 255, 255, 0.9);
+      padding: 0 2px;
+      border-radius: 2px;
+      transition: all 0.2s ease;
+      line-height: 1;
     }
     
-    .timer-body {
-      padding: 15px;
+    #closeBtn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      color: #ff1744;
+      transform: scale(1.1);
     }
     
     #timeInput {
       width: 100%;
-      padding: 10px 12px;
-      border: none;
-      border-radius: 6px;
-      background-color: rgba(255,255,255,0.9);
+      padding: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.9);
       color: #333;
-      font-size: 16px;
-      margin-bottom: 12px;
+      font-size: 10px;
+      font-weight: bold;
+      margin: 2px 0;
       box-sizing: border-box;
       text-align: center;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    #timeInput:focus {
+      outline: none;
+      border-color: #fff;
+      box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
     }
     
     .timer-buttons {
       display: flex;
-      gap: 10px;
-      margin-bottom: 12px;
+      gap: 2px;
+      margin: 2px 0;
     }
     
     #startBtn, #stopBtn {
       flex: 1;
-      padding: 10px;
+      padding: 5px;
       border: none;
-      border-radius: 6px;
+      border-radius: 4px;
       cursor: pointer;
+      font-size: 12px;
       font-weight: bold;
-      transition: all 0.2s;
-      text-transform: uppercase;
-      font-size: 14px;
+      transition: all 0.2s ease;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.3);
     }
     
     #startBtn {
-      background-color: #ff5722;
+      background: linear-gradient(135deg, #ff1744, #ff5722);
       color: white;
-      text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 4px rgba(255, 23, 68, 0.3);
     }
 
     #startBtn:hover {
-      background-color: #ff7043;
-      box-shadow: 0 0 10px rgba(255,87,34,0.5);
-      transform: scale(1.03);
+      background: linear-gradient(135deg, #ff5722, #ff9800);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(255, 87, 34, 0.4);
     }
 
     #stopBtn {
-      background-color: #455a64;
+      background: linear-gradient(135deg, #424242, #616161);
       color: white;
-      text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 4px rgba(66, 66, 66, 0.3);
     }
 
     #stopBtn:hover {
-      background-color: #546e7a;
-      box-shadow: 0 0 10px rgba(69,90,100,0.5);
-      transform: scale(1.03);
+      background: linear-gradient(135deg, #616161, #757575);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(97, 97, 97, 0.4);
     }
     
     #stopBtn:disabled {
-      background-color: #cccccc;
+      background: #999;
       cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
     
     .timer-display {
       text-align: center;
-      font-size: 26px;
+      font-size: 12px;
       font-weight: bold;
-      padding: 12px;
-      background-color: rgba(0,0,0,0.15);
-      border-radius: 6px;
-      margin-top: 10px;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-      background-image: linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(0,0,0,0.1));
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+      padding: 5px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      margin: 2px 0;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      backdrop-filter: blur(2px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .timer-display.low-time {
+      color: #ffeb3b;
+      animation: pulse 0.8s ease-in-out infinite;
+    }
+    
+    .timer-display.critical-time {
+      color: #ff1744;
+      animation: urgentPulse 0.4s ease-in-out infinite;
     }
   `;
   
@@ -157,7 +205,41 @@
   const stopBtn = document.getElementById("stopBtn");
   const timeInput = document.getElementById("timeInput");
   const timerDisplay = document.getElementById("timerDisplay");
-  const closeBtn = document.getElementById("close-timer");
+  const dragHandle = document.getElementById("dragHandle");
+  const closeBtn = document.getElementById("closeBtn");
+  
+  // Add drag functionality
+  let isDragging = false;
+  let dragOffset = { x: 0, y: 0 };
+
+  dragHandle.addEventListener('mousedown', (e) => {
+    if (e.target.id === 'closeBtn') return; // Don't drag when clicking close button
+    isDragging = true;
+    const rect = timerBox.getBoundingClientRect();
+    dragOffset.x = e.clientX - rect.left;
+    dragOffset.y = e.clientY - rect.top;
+    timerBox.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+      const x = e.clientX - dragOffset.x;
+      const y = e.clientY - dragOffset.y;
+      
+      const maxX = window.innerWidth - timerBox.offsetWidth;
+      const maxY = window.innerHeight - timerBox.offsetHeight;
+      
+      timerBox.style.left = Math.max(0, Math.min(x, maxX)) + 'px';
+      timerBox.style.top = Math.max(0, Math.min(y, maxY)) + 'px';
+      timerBox.style.right = 'auto';
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    isDragging = false;
+    timerBox.style.cursor = '';
+  });
   
   // Format time as MM:SS
   function formatTime(seconds) {
@@ -187,6 +269,7 @@
     stopBtn.disabled = false;
     timeInput.disabled = true;
     isRunning = true;
+    timerBox.classList.add('running');
     
     // Display initial time
     timerDisplay.textContent = formatTime(timeLeft);
@@ -196,13 +279,14 @@
       timeLeft--;
       timerDisplay.textContent = formatTime(timeLeft);
 
-      // Change color and add motivational messages when time is running out
+      // Add urgency effects as time runs out
+      timerDisplay.classList.remove('low-time', 'critical-time');
+      timerBox.classList.remove('urgent');
+      
       if (timeLeft <= 60) {
-        timerDisplay.style.color = "#ffcc00";
+        timerDisplay.classList.add('low-time');
       }
       if (timeLeft <= 30) {
-        timerDisplay.style.color = "#ff6600";
-
         // Show motivational message every 10 seconds when time is getting low
         if (timeLeft % 10 === 0) {
           // Array of motivational messages
@@ -227,24 +311,32 @@
         }
       }
       if (timeLeft <= 10) {
-        timerDisplay.style.color = "#ff0000";
+        timerDisplay.classList.add('critical-time');
+        timerBox.classList.add('urgent');
       }
       
       if (timeLeft <= 0) {
         clearInterval(countdown);
-        timerDisplay.textContent = "Time's up!";
-        timerDisplay.style.color = "#ff0000";
+        timerDisplay.textContent = "Time's up! 🔥";
+        timerDisplay.classList.add('critical-time');
+        timerBox.classList.remove('running');
+        timerBox.classList.add('urgent');
         startBtn.disabled = false;
         stopBtn.disabled = true;
         timeInput.disabled = false;
         isRunning = false;
         
-        // Flash effect
+        // Flash effect with fire colors
         let flashCount = 0;
         const flash = setInterval(() => {
-          timerBox.style.backgroundColor = flashCount % 2 === 0 ? '#ff0000' : '';
+          timerBox.style.background = flashCount % 2 === 0 ? 
+            'linear-gradient(135deg, #ff1744, #ff5722)' : 
+            'linear-gradient(135deg, #ff5722, #ff9800)';
           flashCount++;
-          if (flashCount > 10) clearInterval(flash);
+          if (flashCount > 10) {
+            clearInterval(flash);
+            timerBox.style.background = '';
+          }
         }, 300);
         
         // Play alarm
@@ -259,7 +351,8 @@
   stopBtn.addEventListener("click", () => {
     clearInterval(countdown);
     timerDisplay.textContent = "Stopped";
-    timerDisplay.style.color = "";
+    timerDisplay.classList.remove('low-time', 'critical-time');
+    timerBox.classList.remove('running', 'urgent');
     startBtn.disabled = false;
     stopBtn.disabled = true;
     timeInput.disabled = false;
@@ -267,7 +360,10 @@
   });
   
   // Close timer
-  closeBtn.addEventListener("click", () => {
-    timerBox.style.display = "none";
+  closeBtn.addEventListener("click", (e) => {
+    e.stopPropagation(); // Prevent dragging
+    clearInterval(countdown);
+    timerBox.remove();
   });
+  
 })();
